@@ -1,99 +1,13 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>나의 챗봇</title>
-  <style>
-    body {
-      background-color: #f5f5f5;
-    }
-
-    h1 {
-      color: #333;
-      text-align: center;
-    }
-
-    #messages {
-      height: 300px;
-      border: 1px solid #ccc;
-      padding: 10px;
-      overflow-y: auto;
-      background-color: white;
-      margin: 20px auto;
-      max-width: 500px;
-    }
-
-    .input-area {
-      text-align: center;
-      padding: 15px;
-    }
-
-    #message-input {
-      width: 70%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 14px;
-    }
-
-    button {
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #0056b3;
-    }
-  </style>
-</head>
-<body>
-  <h1>나의 챗봇</h1>
-
-  <div id="messages"></div>
-
-  <div class="input-area">
-    <input
-      type="text"
-      id="message-input"
-      placeholder="메시지 입력..."
-      onkeypress="handleKeyPress(event)"
-    >
-    <button onclick="sendMessage()">전송</button>
-  </div>
-
-  <script>
-    function sendMessage() {
-      const input = document.getElementById('message-input');
-      const text = input.value;
-
-      if (text === '') return;
-
-      const messagesDiv = document.getElementById('messages');
-
-      // 사용자 메시지 추가
-      const userMessage = document.createElement('div');
-      userMessage.textContent = '나: ' + text;
-      messagesDiv.appendChild(userMessage);
-
-      input.value = '';
-
-      // 봇 응답 (1초 후)
-      setTimeout(function() {
-        const botMessage = document.createElement('div');
-        botMessage.textContent = '메세지를 응답받았어요';
-        messagesDiv.appendChild(botMessage);
-      }, 1000);
-    }
-
-    function handleKeyPress(event) {
-      if (event.key === 'Enter') {
-        sendMessage();
-      }
-    }
-  </script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>나의 AI 비서</title>
+  </head>
+  <body>
+    <div id="root" style="max-width: none; padding: 0;"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

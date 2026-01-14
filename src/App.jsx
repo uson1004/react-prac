@@ -1,84 +1,105 @@
-import { useState, useEffect, useRef } from 'react'
-import './App.css'
+import { useState, useEffect } from 'react';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import './App.css';
 
-function App() {
-  // 메시지 목록을 저장하는 State
-  const [messages, setMessages] = useState([]);
-  // 입력창의 텍스트를 저장하는 State
-  const [inputValue, setInputValue] = useState('');
-  
-  // 스크롤을 항상 아래로 유지하기 위한 Ref
-  const messagesEndRef = useRef(null);
-
-  // 메시지가 추가될 때마다 스크롤을 아래로 내림
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+const App = () => {
+  const [message, setMessage] = useState('');
+  const [chatHistory, setChatHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [model, setModel] = useState(null);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (apiKey) {
+      const ai = new GoogleGenerativeAI(apiKey);
+      const safetySettings = [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      ];
+      const generativeModel = ai.getGenerativeModel({ model: 'gemini-pro-latest', safetySettings });
+      setModel(generativeModel);
+    }
+  }, []);
 
-  // 메시지 전송 함수
-  const sendMessage = () => {
-    if (inputValue.trim() === '') return;
+  const sendMessage = async () => {
+    if (!model) {
+      alert('모델이 준비되지 않았습니다. API 키를 확인해주세요.');
+      return;
+    }
 
-    // 1. 사용자 메시지 추가
-    const userMessage = { sender: '나', text: inputValue };
-    setMessages((prev) => [...prev, userMessage]);
-    
-    // 입력창 비우기 (현재 텍스트를 임시 저장 후 초기화)
-    const currentText = inputValue;
-    setInputValue('');
+    setLoading(true);
+    const userMessage = { role: 'user', parts: [{ text: message }] };
+    const fullHistory = [...chatHistory, userMessage];
+    setChatHistory(fullHistory);
+    setMessage('');
 
-    // 2. 봇 응답 (1초 후)
-    setTimeout(() => {
-      const botMessage = { sender: '봇', text: `"${currentText}"라고 하셨군요!` };
-      setMessages((prev) => [...prev, botMessage]);
-    }, 1000);
-  };
+    try {
+      const result = await model.generateContent({ contents: fullHistory });
+      const response = await result.response;
 
-  // 엔터키 처리 함수
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      sendMessage();
+      if (response.promptFeedback?.blockReason) {
+        const errorMessage = {
+          role: 'error',
+          text: `응답이 차단되었습니다. 이유: ${response.promptFeedback.blockReason}`,
+        };
+        setChatHistory(prev => [...prev, errorMessage]);
+        return;
+      }
+
+      const text = response.text();
+
+      if (text) {
+        const botMessage = { role: 'model', parts: [{ text: text }] };
+        setChatHistory(prev => [...prev, botMessage]);
+      } else {
+        const errorMessage = {
+          role: 'error',
+          text: 'AI의 응답이 비어있습니다. 다른 질문을 시도해보세요.',
+        };
+        setChatHistory(prev => [...prev, errorMessage]);
+      }
+    } catch (error) {
+      console.error('Detailed error sending message:', error);
+      const errorMessage = {
+        role: 'error',
+        text: `메시지 전송 중 오류 발생: ${error.message}`,
+      };
+      setChatHistory(prev => [...prev, errorMessage]);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="app-container">
-      <h1>나의 챗봇</h1>
-
-      {/* 메시지 출력 영역 */}
-      <div id="messages">
-        {messages.map((msg, index) => (
-          <div key={index} className="message">
-            {msg.sender}: {msg.text}
+    <div className="chat-container">
+      <div className="chat-history">
+        {chatHistory.map((msg, index) => (
+          <div key={index} className={`chat-message ${msg.role}`}>
+            {/* 마크다운 렌더링을 위해 ReactMarkdown 컴포넌트 사용 */}
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {msg.parts ? msg.parts[0].text : msg.text}
+            </ReactMarkdown>
           </div>
         ))}
-        {/* 스크롤 자동 이동을 위한 보이지 않는 요소 */}
-        <div ref={messagesEndRef} />
+        {loading && <div className="chat-message model">AI가 생각중...</div>}
       </div>
-
-      {/* 입력 영역 */}
-      <div className="input-area">
+      <div className="chat-input">
         <input
           type="text"
-          id="message-input"
-          placeholder="메시지 입력..."
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && !loading && sendMessage()}
+          placeholder="메시지를 입력하세요..."
+          disabled={loading}
         />
-        <button onClick={sendMessage}>전송</button>
+        <button onClick={sendMessage} disabled={loading}>전송</button>
       </div>
-
-      {/* 푸터 */}
-      <footer>
-        <p>&copy; 2024 나의 챗봇. All rights reserved.</p>
-      </footer>
     </div>
   );
-}
+};
 
-export default App
+export default App;
