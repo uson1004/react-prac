@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Header from './components/Header'; // Header 컴포넌트 가져오기
 import './App.css';
 
 const App = () => {
@@ -75,28 +76,30 @@ const App = () => {
   };
 
   return (
-    <div className="chat-container">
-      <div className="chat-history">
-        {chatHistory.map((msg, index) => (
-          <div key={index} className={`chat-message ${msg.role}`}>
-            {/* 마크다운 렌더링을 위해 ReactMarkdown 컴포넌트 사용 */}
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {msg.parts ? msg.parts[0].text : msg.text}
-            </ReactMarkdown>
-          </div>
-        ))}
-        {loading && <div className="chat-message model">AI가 생각중...</div>}
-      </div>
-      <div className="chat-input">
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && !loading && sendMessage()}
-          placeholder="메시지를 입력하세요..."
-          disabled={loading}
-        />
-        <button onClick={sendMessage} disabled={loading}>전송</button>
+    <div className="app-container"> {/* 전체를 감싸는 컨테이너 추가 */}
+      <Header /> {/* 헤더 컴포넌트 렌더링 */}
+      <div className="chat-container">
+        <div className="chat-history">
+          {chatHistory.map((msg, index) => (
+            <div key={index} className={`chat-message ${msg.role}`}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {msg.parts ? msg.parts[0].text : msg.text}
+              </ReactMarkdown>
+            </div>
+          ))}
+          {loading && <div className="chat-message model">AI가 생각중...</div>}
+        </div>
+        <div className="chat-input">
+          <input
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && !loading && sendMessage()}
+            placeholder="메시지를 입력하세요..."
+            disabled={loading}
+          />
+          <button onClick={sendMessage} disabled={loading}>전송</button>
+        </div>
       </div>
     </div>
   );
